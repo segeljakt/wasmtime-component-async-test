@@ -1,4 +1,5 @@
 use wasmtime::component::Component;
+use wasmtime::component::HostFuture;
 use wasmtime::component::Linker;
 use wasmtime::component::ResourceTable;
 use wasmtime::component::TypedFunc;
@@ -61,25 +62,68 @@ async fn main() -> anyhow::Result<()> {
         .instantiate_async(&mut store, &component)
         .await
         .unwrap();
+
     let intf_export = instance
         .get_export(&mut store, None, "pkg:component/intf")
         .unwrap();
 
-    let export = instance
-        .get_export(&mut store, Some(&intf_export), "test")
-        .unwrap();
+    {
+        let export = instance
+            .get_export(&mut store, Some(&intf_export), "test")
+            .unwrap();
 
-    let func: TypedFunc<(String,), (String,)> =
-        instance.get_typed_func(&mut store, export).unwrap();
+        let func: TypedFunc<(String,), (String,)> =
+            instance.get_typed_func(&mut store, export).unwrap();
 
-    let (result,) = func
-        .call_async(&mut store, ("Hello".to_owned(),))
-        .await
-        .unwrap();
+        let (result,) = func
+            .call_async(&mut store, ("Hello".to_owned(),))
+            .await
+            .unwrap();
 
-    func.post_return_async(&mut store).await.unwrap();
+        func.post_return_async(&mut store).await.unwrap();
 
-    println!("Result: {:?}", result);
+        println!("Result: {:?}", result);
+    }
 
+    {
+        let export = instance
+            .get_export(&mut store, Some(&intf_export), "test2")
+            .unwrap();
+
+        let func2: TypedFunc<(String,), (HostFuture<String>,)> =
+            instance.get_typed_func(&mut store, export).unwrap();
+
+        let (result,) = func2
+            .call_async(&mut store, ("Hello".to_owned(),))
+            .await
+            .unwrap();
+
+        func2.post_return_async(&mut store).await.unwrap();
+
+        if let Ok(Ok(result)) = result.into_reader(&mut store).read().get(&mut store).await {
+            println!("Result: {:?}", result);
+        }
+    }
+
+    {
+        let export = instance
+            .get_export(&mut store, Some(&intf_export), "test3")
+            .unwrap();
+
+        let func3: TypedFunc<(HostFuture<String>,), (String,)> =
+            instance.get_typed_func(&mut store, export).unwrap();
+
+        let (tx, rx) = instance.future(&mut store).unwrap();
+
+        tokio::task::spawn(async move {
+            tx.write("Hello World! (test3)".to_owned()).into_future().await;
+        });
+
+        let (result,) = func3.call_async(&mut store, (rx.into(),)).await.unwrap();
+
+        func3.post_return_async(&mut store).await.unwrap();
+
+        println!("Result: {:?}", result);
+    }
     Ok(())
 }

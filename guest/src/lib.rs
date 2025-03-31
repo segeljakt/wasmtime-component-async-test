@@ -8,6 +8,8 @@ pub mod bindings {
         async: {
             exports: [
                 "pkg:component/intf#test",
+                "pkg:component/intf#test2",
+                "pkg:component/intf#test3",
                 "pkg:component/intf#[method]session.infer",
             ]
         }
@@ -39,20 +41,7 @@ impl GuestSession for Session {
     }
 
     async fn infer(&self, prompt: Request) -> Response {
-        // let (tx, rx) = bindings::wit_future::new();
-        // async_support::spawn(async move {
-        //     let response = Response {
-        //         message: format!("Response to: {}", prompt.message)
-        //     };
-        //     tx.send(response).await;
-        // });
-
-        // tx.write("".into());
-
-        // rx
-        Response {
-            message: format!("Response to: {}", prompt.message),
-        }
+        todo!()
     }
 }
 
@@ -60,15 +49,19 @@ impl Guest for bindings::Component {
     type Session = Session;
 
     async fn test(test: String) -> String {
-        format!("Hello world!")
+        format!("Hello World! (test1)")
     }
 
-    fn test2(test: String) -> FutureReader<String> {
+    async fn test2(test: String) -> FutureReader<String> {
         let (tx, rx) = bindings::wit_future::new::<String>();
         async_support::spawn(async move {
-            let response: String = "Response".to_owned();
+            let response: String = "Hello World! (test2)".to_owned();
             tx.write(response).await;
         });
         rx
+    }
+
+    async fn test3(test: FutureReader<String>) -> String {
+        test.await.unwrap().unwrap()
     }
 }

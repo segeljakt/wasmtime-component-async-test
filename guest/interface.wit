@@ -13,6 +13,7 @@ interface intf {
     }
     test: func(test: string) -> string;
     test2: func(test: string) -> future<string>;
+    test3: func(test: future<string>) -> string;
 }
 
 world guest {
