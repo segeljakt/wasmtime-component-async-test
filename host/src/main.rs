@@ -5,16 +5,14 @@ use wasmtime::component::TypedFunc;
 use wasmtime::Config;
 use wasmtime::Engine;
 use wasmtime::Store;
+use wasmtime_wasi::IoImpl;
 use wasmtime_wasi::IoView;
 use wasmtime_wasi::WasiCtx;
 use wasmtime_wasi::WasiCtxBuilder;
 use wasmtime_wasi::WasiImpl;
 use wasmtime_wasi::WasiView;
 
-const GUEST: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../guest/target/wasm32-wasip1/release/guest.wasm"
-);
+const GUEST: &str = concat!(env!("OUT_DIR"), "/wasm32-wasip1/debug/guest.component.wasm");
 
 struct Host {
     ctx: WasiCtx,
@@ -51,9 +49,10 @@ async fn main() -> anyhow::Result<()> {
     config.wasm_component_model_async(true);
     config.wasm_component_model_async_builtins(true);
     config.wasm_component_model_async_stackful(true);
+
     let engine = Engine::new(&config).unwrap();
     let component = Component::from_file(&engine, &GUEST).unwrap();
-    let host = WasiImpl(wasmtime_wasi::IoImpl(Host::new()));
+    let host = WasiImpl(IoImpl(Host::new()));
     let mut store = Store::new(&engine, host);
     let mut linker = Linker::new(&engine);
     wasmtime_wasi::add_to_linker_async::<WasiImpl<Host>>(&mut linker).unwrap();

@@ -1,6 +1,8 @@
 #![allow(unused)]
 pub mod bindings {
-    wit_bindgen::generate!({
+    use wit_bindgen_rust_macro::generate;
+
+    generate!({
         world: "guest",
         path: "interface.wit",
         async: {
@@ -22,8 +24,8 @@ use bindings::exports::pkg::component::intf::Request;
 use bindings::exports::pkg::component::intf::Response;
 use bindings::exports::pkg::component::intf::SessionBorrow;
 use wit_bindgen::rt::async_support::FutureReader;
-use wit_bindgen_rt::async_support;
-use wit_bindgen_rt::async_support::futures::SinkExt;
+use wit_bindgen::rt::async_support;
+use wit_bindgen::rt::async_support::futures::SinkExt;
 
 pub struct Session {
     last_response: String,
