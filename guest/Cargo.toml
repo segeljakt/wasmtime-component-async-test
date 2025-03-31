@@ -14,7 +14,6 @@ edition = "2021"
 # wit-bindgen-rt = "0.41.0"
 wasi = "0.14.2"
 wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["default"] }
-wit-bindgen-rt = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["async"] }
 
 [lib]
 crate-type = ["cdylib"]

@@ -190,7 +190,6 @@ version = "0.1.0"
 dependencies = [
  "wasi",
  "wit-bindgen",
- "wit-bindgen-rt 0.41.0",
 ]
 
 [[package]]
