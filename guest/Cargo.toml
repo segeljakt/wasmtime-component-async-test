@@ -1,0 +1,12 @@
+[package]
+name = "guest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wit-bindgen = "0.41.0"
+wit-bindgen-rt = "0.41.0"
+wasi = "0.14.2"
+
+[lib]
+crate-type = ["cdylib"]

@@ -1,0 +1,19 @@
+package pkg:component;
+
+interface intf {
+    record request {
+        message: string
+    }
+    record response {
+        message: string
+    }
+    resource session {
+        constructor();
+        infer: func(prompt: request) -> response;
+    }
+    test: func(test: string) -> string;
+}
+
+world guest {
+    export intf;
+}

@@ -1,0 +1,19 @@
+[package]
+name = "host"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "host"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.79"
+wasmtime = { git = "https://github.com/bytecodealliance/wasip3-prototyping", features = ["component-model-async"] }
+wit-component = "0.227.1"
+wasmtime-wasi = { git = "https://github.com/bytecodealliance/wasip3-prototyping" }
+reqwest = { version = "0.12.12", features = ["blocking"] }
+tokio = { version = "1.44.1", features = ["full"] }
+
+# wasmtime = { version = "31.0.0", features = ["component-model"] }
+# wasmtime-wasi = "31.0.0"
