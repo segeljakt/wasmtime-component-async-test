@@ -12,6 +12,7 @@ interface intf {
         infer: func(prompt: request) -> response;
     }
     test: func(test: string) -> string;
+    test2: func(test: string) -> future<string>;
 }
 
 world guest {

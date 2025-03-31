@@ -12,10 +12,9 @@ edition = "2021"
 # wasmtime-wit-bindgen = { path = "../wasip3-prototyping/crates/wit-bindgen" }
 # wit-bindgen = "0.41.0"
 # wit-bindgen-rt = "0.41.0"
-# wasi = "0.14.2"
-wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["async"] }
+wasi = "0.14.2"
+wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["default"] }
 wit-bindgen-rt = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["async"] }
-wit-bindgen-rust-macro = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["async"] }
 
 [lib]
 crate-type = ["cdylib"]

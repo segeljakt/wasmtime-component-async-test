@@ -1,6 +1,6 @@
 #![allow(unused)]
 pub mod bindings {
-    use wit_bindgen_rust_macro::generate;
+    use wit_bindgen::generate;
 
     generate!({
         world: "guest",
@@ -23,9 +23,9 @@ use bindings::exports::pkg::component::intf::GuestSession;
 use bindings::exports::pkg::component::intf::Request;
 use bindings::exports::pkg::component::intf::Response;
 use bindings::exports::pkg::component::intf::SessionBorrow;
-use wit_bindgen::rt::async_support::FutureReader;
 use wit_bindgen::rt::async_support;
 use wit_bindgen::rt::async_support::futures::SinkExt;
+use wit_bindgen::rt::async_support::FutureReader;
 
 pub struct Session {
     last_response: String,
@@ -61,5 +61,14 @@ impl Guest for bindings::Component {
 
     async fn test(test: String) -> String {
         format!("Hello world!")
+    }
+
+    fn test2(test: String) -> FutureReader<String> {
+        let (tx, rx) = bindings::wit_future::new::<String>();
+        async_support::spawn(async move {
+            let response: String = "Response".to_owned();
+            tx.write(response).await;
+        });
+        rx
     }
 }
