@@ -57,20 +57,27 @@ async fn main() -> anyhow::Result<()> {
     let mut linker = Linker::new(&engine);
     wasmtime_wasi::add_to_linker_async::<WasiImpl<Host>>(&mut linker).unwrap();
 
-    let instance = linker.instantiate(&mut store, &component).unwrap();
-    let intf_export = instance.get_export(&mut store, None, "intf").unwrap();
-
-    let _prompt = std::env::args()
-        .nth(1)
-        .unwrap_or("Hello, my name is".to_string());
+    let instance = linker
+        .instantiate_async(&mut store, &component)
+        .await
+        .unwrap();
+    let intf_export = instance
+        .get_export(&mut store, None, "pkg:component/intf")
+        .unwrap();
 
     let export = instance
         .get_export(&mut store, Some(&intf_export), "test")
         .unwrap();
-    let func: TypedFunc<(), (String,)> = instance.get_typed_func(&mut store, export).unwrap();
-    let result = func.call_async(&mut store, ()).await.unwrap();
 
-    func.post_return(&mut store).unwrap();
+    let func: TypedFunc<(String,), (String,)> =
+        instance.get_typed_func(&mut store, export).unwrap();
+
+    let (result,) = func
+        .call_async(&mut store, ("Hello".to_owned(),))
+        .await
+        .unwrap();
+
+    func.post_return_async(&mut store).await.unwrap();
 
     println!("Result: {:?}", result);
 
