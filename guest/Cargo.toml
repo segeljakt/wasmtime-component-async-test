@@ -13,6 +13,7 @@ edition = "2021"
 # wit-bindgen = "0.41.0"
 # wit-bindgen-rt = "0.41.0"
 wasi = "0.14.2"
+# wasmtime-wasi = { path = "../wasip3-prototyping/crates/wasi" }
 wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen", rev = "ec56282b", features = ["default"] }
 
 [lib]

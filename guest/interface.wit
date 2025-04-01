@@ -14,6 +14,10 @@ interface intf {
     test: func(test: string) -> string;
     test2: func(test: string) -> future<string>;
     test3: func(test: future<string>) -> string;
+    test4: func(test: stream<string>) -> stream<string>;
+    test5: func();
+    get-files: func() -> list<string>;
+    read-file: func() -> string;
 }
 
 world guest {
