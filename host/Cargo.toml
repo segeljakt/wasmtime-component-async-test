@@ -3,10 +3,6 @@ name = "host"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "host"
-path = "src/main.rs"
-
 [dependencies]
 wasmtime = { path = "../wasip3-prototyping/crates/wasmtime", features = ["component-model-async"] }
 wasmtime-wasi = { path = "../wasip3-prototyping/crates/wasi" }

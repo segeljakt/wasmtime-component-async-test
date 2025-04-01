@@ -11,7 +11,6 @@ pub mod bindings {
                 "pkg:component/intf#test2",
                 "pkg:component/intf#test3",
                 "pkg:component/intf#test4",
-                "pkg:component/intf#test5",
                 "pkg:component/intf#get-files",
                 "pkg:component/intf#read-file",
                 "pkg:component/intf#[method]session.infer",
@@ -31,6 +30,7 @@ use bindings::exports::pkg::component::intf::GuestSession;
 use bindings::exports::pkg::component::intf::Request;
 use bindings::exports::pkg::component::intf::Response;
 use bindings::exports::pkg::component::intf::SessionBorrow;
+use wasi::cli::stdin::InputStream;
 use wasi::filesystem::preopens::get_directories;
 use wasi::filesystem::types::Descriptor;
 use wasi::filesystem::types::DescriptorFlags;
@@ -85,10 +85,6 @@ impl Guest for bindings::Component {
             for i in 0..10 {
                 match stream.next().await {
                     Some(Ok(_items)) => {
-                        // let items = items
-                        //     .into_iter()
-                        //     .map(|item| format!("Hello World! (test4) {}", item))
-                        //     .collect();
                         tx.send(vec!["Response".to_string()]).await;
                     }
                     _ => {
@@ -99,25 +95,6 @@ impl Guest for bindings::Component {
             }
         });
         rx
-    }
-
-    async fn test5() {
-        // let dirs = wasi::filesystem::preopens::get_directories();
-        // for dir in dirs {}
-        // let x = Descriptor::open_at(
-        //     PathFlags::empty(),
-        //     "test.txt",
-        //     OpenFlags::CREATE,
-        //     DescriptorFlags::WRITE,
-        // );
-        // let (mut tx, rx) = bindings::wit_stream::new::<String>();
-        // async_support::spawn(async move {
-        //     for i in 0..10 {
-        //         tx.send(vec![format!("Hello World! (test5) {}", i)]).await;
-        //     }
-        //     tx.close().await.unwrap();
-        // });
-        // rx
     }
 
     async fn get_files() -> Vec<String> {
