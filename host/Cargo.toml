@@ -12,7 +12,14 @@ reqwest = { version = "0.12.12", features = ["blocking"] }
 tokio = { version = "1.44.1", features = ["full"] }
 
 [build-dependencies]
-wasmparser = { git = "https://github.com/bytecodealliance/wasm-tools", rev = "43556041" }
-wit-component = { git = "https://github.com/bytecodealliance/wasm-tools", rev = "43556041" }
+wasmparser = { version = "0.228.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "ec621cf1" }
+wit-component = { version = "0.228.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "ec621cf1" }
+# wasmparser = { version = "0.228.0" }
+# wit-component = { version = "0.228.0" }
+# wasmtime = { path = "../wasip3-prototyping/crates/wasmtime", features = ["component-model-async", "reexport-wasmparser"] }
 #wit-component = "0.227.1"
+#https://github.com/bytecodealliance/wasm-tools#
 #wasmparser = "0.227.1"
+
+[patch.crates-io]
+wasmparser = { version = "0.228.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "ec621cf1" }

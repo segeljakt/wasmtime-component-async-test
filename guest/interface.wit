@@ -25,6 +25,8 @@ world guest {
     include wasi:filesystem/imports@0.3.0;
     include wasi:random/imports@0.3.0;
     include wasi:sockets/imports@0.3.0;
+    // https://github.com/bytecodealliance/wasip3-prototyping/tree/main/crates/wasi-http/src/p3/wit/deps
+    //include wasi:http/imports@0.3.0-draft;
 
     export intf;
 }

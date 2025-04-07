@@ -5,6 +5,7 @@ pub mod bindings {
         path: [
             // Note: These imports are order-sensitive.
             "../wasip3-prototyping/crates/wasi/src/p3/wit/",
+            // "../wasip3-prototyping/crates/wasi-http/src/p3/wit/",
             "interface.wit",
         ],
         async: {
@@ -68,6 +69,8 @@ pub mod bindings {
 }
 
 use std::io::Read;
+use std::net::TcpListener;
+use std::net::TcpStream;
 
 use bindings::exports::pkg::component::intf::Guest;
 use bindings::exports::pkg::component::intf::GuestSession;
@@ -81,10 +84,15 @@ use bindings::wasi::filesystem::types::DescriptorFlags;
 use bindings::wasi::filesystem::types::DirectoryEntry;
 use bindings::wasi::filesystem::types::OpenFlags;
 use bindings::wasi::filesystem::types::PathFlags;
+use bindings::wasi::sockets::types::IpAddressFamily;
+use bindings::wasi::sockets::types::IpSocketAddress;
+use bindings::wasi::sockets::types::Ipv4SocketAddress;
 use bindings::wasi::sockets::types::TcpSocket;
 use bindings::wit_stream::StreamPayload;
 use wit_bindgen::rt::async_support;
 use wit_bindgen::rt::async_support::futures::SinkExt;
+use wit_bindgen::rt::async_support::futures::AsyncRead;
+use wit_bindgen::rt::async_support::futures::AsyncWrite;
 use wit_bindgen::rt::async_support::futures::StreamExt;
 use wit_bindgen::rt::async_support::FutureReader;
 use wit_bindgen::rt::async_support::StreamReader;
@@ -156,6 +164,57 @@ impl Guest for bindings::Component {
                 string.push_str("\n");
             }
         }
+        // let mut socket = TcpSocket::new(IpAddressFamily::Ipv4);
+        // socket
+        //     .bind(IpSocketAddress::Ipv4(Ipv4SocketAddress {
+        //         port: 8080,
+        //         address: (127, 0, 0, 1),
+        //     }))
+        //     .await
+        //     .unwrap();
+        // let stream = socket.listen().await.unwrap();
+        // let connections = stream.next().await.unwrap().unwrap();
+        // for connection in connections {
+        //     let (stream, err) = connection.receive().await;
+        //     let x = X {};
+        //     let framed = tokio_util::codec::Framed::new(x, tokio_util::codec::LinesCodec::new());
+        // }
         string
+    }
+}
+
+struct X {}
+
+impl tokio::io::AsyncRead for X {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        todo!()
+    }
+}
+
+impl tokio::io::AsyncWrite for X {
+    fn poll_write(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<Result<usize, std::io::Error>> {
+        todo!()
+    }
+
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), std::io::Error>> {
+        todo!()
+    }
+
+    fn poll_shutdown(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), std::io::Error>> {
+        todo!()
     }
 }
