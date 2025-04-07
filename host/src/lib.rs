@@ -1,12 +1,11 @@
 #![allow(unused_imports)]
 use anyhow::Result;
 use std::error::Error;
-use wasmtime::component::ErrorContext;
-
 use wasmtime::component::Accessor;
 use wasmtime::component::AccessorTask;
 use wasmtime::component::Component;
 use wasmtime::component::ComponentExportIndex;
+use wasmtime::component::ErrorContext;
 use wasmtime::component::HostFuture;
 use wasmtime::component::HostStream;
 use wasmtime::component::Instance;
@@ -20,14 +19,25 @@ use wasmtime::component::TypedFunc;
 use wasmtime::Config;
 use wasmtime::Engine;
 use wasmtime::Store;
+use wasmtime_wasi::p3::cli::WasiCliCtx;
+use wasmtime_wasi::p3::cli::WasiCliView;
+use wasmtime_wasi::p3::clocks::WasiClocksCtx;
+use wasmtime_wasi::p3::clocks::WasiClocksView;
+use wasmtime_wasi::p3::filesystem::DirPerms;
+use wasmtime_wasi::p3::filesystem::FilePerms;
+use wasmtime_wasi::p3::filesystem::WasiFilesystemCtx;
+use wasmtime_wasi::p3::filesystem::WasiFilesystemView;
+use wasmtime_wasi::p3::random::WasiRandomCtx;
+use wasmtime_wasi::p3::random::WasiRandomView;
+use wasmtime_wasi::p3::sockets::AllowedNetworkUses;
+use wasmtime_wasi::p3::sockets::SocketAddrCheck;
+use wasmtime_wasi::p3::sockets::WasiSocketsCtx;
+use wasmtime_wasi::p3::sockets::WasiSocketsView;
 use wasmtime_wasi::p3::AccessorTaskFn;
-use wasmtime_wasi::DirPerms;
-use wasmtime_wasi::FilePerms;
-use wasmtime_wasi::IoImpl;
+use wasmtime_wasi::p3::ResourceView;
 use wasmtime_wasi::IoView;
 use wasmtime_wasi::WasiCtx;
 use wasmtime_wasi::WasiCtxBuilder;
-use wasmtime_wasi::WasiImpl;
 use wasmtime_wasi::WasiView;
 
 pub const GUEST: &str = concat!(env!("OUT_DIR"), "/wasm32-wasip1/debug/guest.component.wasm");
@@ -35,6 +45,11 @@ pub const GUEST: &str = concat!(env!("OUT_DIR"), "/wasm32-wasip1/debug/guest.com
 pub struct Host {
     ctx: WasiCtx,
     table: ResourceTable,
+    sockets: WasiSocketsCtx,
+    random: WasiRandomCtx,
+    clocks: WasiClocksCtx,
+    cli: WasiCliCtx,
+    filesystem: WasiFilesystemCtx,
 }
 
 impl WasiView for Host {
@@ -49,29 +64,77 @@ impl IoView for Host {
     }
 }
 
-pub async fn init() -> (Instance, Store<WasiImpl<Host>>, ComponentExportIndex) {
+impl ResourceView for Host {
+    fn table(&mut self) -> &mut ResourceTable {
+        &mut self.table
+    }
+}
+
+impl WasiClocksView for Host {
+    fn clocks(&mut self) -> &WasiClocksCtx {
+        &self.clocks
+    }
+}
+
+impl WasiCliView for Host {
+    fn cli(&mut self) -> &WasiCliCtx {
+        &self.cli
+    }
+}
+
+impl WasiRandomView for Host {
+    fn random(&mut self) -> &mut WasiRandomCtx {
+        &mut self.random
+    }
+}
+
+impl WasiSocketsView for Host {
+    fn sockets(&self) -> &WasiSocketsCtx {
+        &self.sockets
+    }
+}
+
+impl WasiFilesystemView for Host {
+    fn filesystem(&self) -> &WasiFilesystemCtx {
+        &self.filesystem
+    }
+}
+
+pub async fn init() -> (Instance, Store<Host>, ComponentExportIndex) {
     let mut config = Config::new();
-    config.debug_info(true);
-    config.cranelift_debug_verifier(true);
     config.async_support(true);
-    config.wasm_component_model(true);
     config.wasm_component_model_async(true);
 
-    let ctx = WasiCtxBuilder::new()
-        .inherit_stdio()
-        .inherit_network()
+    let mut host = Host {
+        table: ResourceTable::new(),
+        sockets: WasiSocketsCtx::default(),
+        random: WasiRandomCtx::default(),
+        clocks: WasiClocksCtx::default(),
+        cli: WasiCliCtx::default(),
+        filesystem: WasiFilesystemCtx::default(),
+        ctx: WasiCtxBuilder::new().inherit_stdio().build(),
+    };
+
+    host.filesystem
         .preopened_dir("data", "data", DirPerms::READ, FilePerms::READ)
-        .unwrap()
-        .build();
-    let table = ResourceTable::new();
-    let host = Host { ctx, table };
+        .unwrap();
+    host.sockets.socket_addr_check = SocketAddrCheck::new(|_, _| Box::pin(async { true }));
+    host.sockets.allowed_network_uses = AllowedNetworkUses {
+        ip_name_lookup: true,
+        udp: true,
+        tcp: true,
+    };
 
     let engine = Engine::new(&config).unwrap();
     let component = Component::from_file(&engine, &GUEST).unwrap();
-    let host = WasiImpl(IoImpl(host));
     let mut store = Store::new(&engine, host);
     let mut linker = Linker::new(&engine);
-    wasmtime_wasi::add_to_linker_async::<WasiImpl<Host>>(&mut linker).unwrap();
+    wasmtime_wasi::add_to_linker_async(&mut linker).unwrap();
+    wasmtime_wasi::p3::sockets::add_to_linker(&mut linker).unwrap();
+    wasmtime_wasi::p3::random::add_to_linker(&mut linker).unwrap();
+    wasmtime_wasi::p3::clocks::add_to_linker(&mut linker).unwrap();
+    wasmtime_wasi::p3::cli::add_to_linker(&mut linker).unwrap();
+    wasmtime_wasi::p3::filesystem::add_to_linker::<Host>(&mut linker).unwrap();
 
     let instance = linker
         .instantiate_async(&mut store, &component)
@@ -156,29 +219,6 @@ async fn test3() {
     handle.await.unwrap();
 }
 
-// struct Task {
-//     tx: StreamWriter<Single<String>>,
-// }
-//
-// impl<T, U: IoView> AccessorTask<T, U, Result<()>> for Task {
-//     async fn run(self, accessor: &mut Accessor<T, U>) -> Result<()> {
-//         let mut tx = Some(self.tx);
-//         for _ in 0..10 {
-//             tx = accessor
-//                 .with(|_view| {
-//                     Ok::<_, anyhow::Error>(
-//                         tx.take()
-//                             .unwrap()
-//                             .write(Single("Hello".to_string()))
-//                             .into_future(),
-//                     )
-//                 })?
-//                 .await;
-//         }
-//         Ok(())
-//     }
-// }
-
 // test4: async fn(Stream<String>) -> Stream<String>
 #[tokio::test]
 async fn test4() {
@@ -235,23 +275,10 @@ async fn test4() {
 
 // get-files: async fn() -> String
 #[tokio::test]
-async fn test_get_files() {
+async fn test_get_files_p3() {
     let (instance, mut store, intf_export) = init().await;
     let export = instance
-        .get_export(&mut store, Some(&intf_export), "get-files")
-        .unwrap();
-    let func: TypedFunc<(), (Vec<String>,)> = instance.get_typed_func(&mut store, export).unwrap();
-    let (result,) = func.call_async(&mut store, ()).await.unwrap();
-    func.post_return_async(&mut store).await.unwrap();
-    println!("Result: {:?}", result);
-}
-
-// read-file: async fn() -> String
-#[tokio::test]
-async fn test_read_file() {
-    let (instance, mut store, intf_export) = init().await;
-    let export = instance
-        .get_export(&mut store, Some(&intf_export), "read-file")
+        .get_export(&mut store, Some(&intf_export), "get-files-p3")
         .unwrap();
     let func: TypedFunc<(), (String,)> = instance.get_typed_func(&mut store, export).unwrap();
     let (result,) = func.call_async(&mut store, ()).await.unwrap();

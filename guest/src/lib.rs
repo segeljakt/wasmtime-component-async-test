@@ -1,21 +1,65 @@
 #![allow(unused)]
 pub mod bindings {
-    use wit_bindgen::generate;
-
-    generate!({
-        world: "guest",
-        path: "interface.wit",
+    wit_bindgen::generate!({
+        world: "pkg:component/guest",
+        path: [
+            // Note: These imports are order-sensitive.
+            "../wasip3-prototyping/crates/wasi/src/p3/wit/",
+            "interface.wit",
+        ],
         async: {
             exports: [
                 "pkg:component/intf#test",
                 "pkg:component/intf#test2",
                 "pkg:component/intf#test3",
                 "pkg:component/intf#test4",
-                "pkg:component/intf#get-files",
-                "pkg:component/intf#read-file",
                 "pkg:component/intf#[method]session.infer",
+                "pkg:component/intf#get-files-p3",
+            ],
+            imports: [
+                "wasi:cli/stdin@0.3.0#get-stdin",
+                "wasi:cli/stdout@0.3.0#set-stdout",
+                "wasi:cli/stderr@0.3.0#set-stderr",
+                "wasi:clocks/monotonic-clock@0.3.0#wait-for",
+                "wasi:clocks/monotonic-clock@0.3.0#wait-until",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.read-via-stream",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.write-via-stream",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.append-via-stream",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.advise",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.sync-data",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.get-flags",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.get-type",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.set-size",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.set-times",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.read-directory",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.sync",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.create-directory-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.stat",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.stat-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.set-times-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.link-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.open-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.readlink-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.remove-directory-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.rename-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.symlink-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.unlink-file-at",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.is-same-object",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.metadata-hash",
+                "wasi:filesystem/types@0.3.0#[method]descriptor.metadata-hash-at",
+                "wasi:sockets/ip-name-lookup@0.3.0#resolve-addresses",
+                "wasi:sockets/types@0.3.0#[method]tcp-socket.bind",
+                "wasi:sockets/types@0.3.0#[method]tcp-socket.connect",
+                "wasi:sockets/types@0.3.0#[method]tcp-socket.listen",
+                "wasi:sockets/types@0.3.0#[method]tcp-socket.receive",
+                "wasi:sockets/types@0.3.0#[method]tcp-socket.send",
+                "wasi:sockets/types@0.3.0#[method]udp-socket.bind",
+                "wasi:sockets/types@0.3.0#[method]udp-socket.connect",
+                "wasi:sockets/types@0.3.0#[method]udp-socket.receive",
+                "wasi:sockets/types@0.3.0#[method]udp-socket.send",
             ]
-        }
+        },
+        generate_all,
     });
 
     pub struct Component;
@@ -30,18 +74,21 @@ use bindings::exports::pkg::component::intf::GuestSession;
 use bindings::exports::pkg::component::intf::Request;
 use bindings::exports::pkg::component::intf::Response;
 use bindings::exports::pkg::component::intf::SessionBorrow;
-use wasi::cli::stdin::InputStream;
-use wasi::filesystem::preopens::get_directories;
-use wasi::filesystem::types::Descriptor;
-use wasi::filesystem::types::DescriptorFlags;
-use wasi::filesystem::types::Filesize;
-use wasi::filesystem::types::OpenFlags;
-use wasi::filesystem::types::PathFlags;
+use bindings::wasi::filesystem;
+use bindings::wasi::filesystem::preopens::get_directories;
+use bindings::wasi::filesystem::types::Descriptor;
+use bindings::wasi::filesystem::types::DescriptorFlags;
+use bindings::wasi::filesystem::types::DirectoryEntry;
+use bindings::wasi::filesystem::types::OpenFlags;
+use bindings::wasi::filesystem::types::PathFlags;
+use bindings::wasi::sockets::types::TcpSocket;
+use bindings::wit_stream::StreamPayload;
 use wit_bindgen::rt::async_support;
 use wit_bindgen::rt::async_support::futures::SinkExt;
 use wit_bindgen::rt::async_support::futures::StreamExt;
 use wit_bindgen::rt::async_support::FutureReader;
 use wit_bindgen::rt::async_support::StreamReader;
+use wit_bindgen::rt::async_support::StreamWriter;
 
 pub struct Session {
     last_response: String,
@@ -54,7 +101,7 @@ impl GuestSession for Session {
         }
     }
 
-    async fn infer(&self, prompt: Request) -> Response {
+    async fn infer(&self, request: Request) -> Response {
         todo!()
     }
 }
@@ -97,32 +144,18 @@ impl Guest for bindings::Component {
         rx
     }
 
-    async fn get_files() -> Vec<String> {
-        get_directories()
-            .into_iter()
-            .flat_map(|(desc, name)| {
-                let stream = desc.read_directory().unwrap();
-                std::iter::from_fn(move || stream.read_directory_entry().unwrap())
-                    .map(|entry| entry.name)
-            })
-            .collect::<Vec<_>>()
-    }
-
-    async fn read_file() -> String {
-        let dirs = get_directories();
-        let (dir, _) = dirs.first().unwrap();
+    async fn get_files_p3() -> String {
         let mut string = String::new();
-        dir.open_at(
-            PathFlags::empty(),
-            "bids.csv",
-            OpenFlags::empty(),
-            DescriptorFlags::READ,
-        )
-        .unwrap()
-        .read_via_stream(0)
-        .unwrap()
-        .read_to_string(&mut string)
-        .unwrap();
+        for (desc, name) in get_directories() {
+            let (mut s, mut f): (
+                StreamReader<DirectoryEntry>,
+                FutureReader<Result<(), filesystem::types::ErrorCode>>,
+            ) = desc.read_directory().await;
+            for d in s.next().await.unwrap().unwrap() {
+                string.push_str(&d.name);
+                string.push_str("\n");
+            }
+        }
         string
     }
 }

@@ -15,10 +15,16 @@ interface intf {
     test2: func(test: string) -> future<string>;
     test3: func(test: future<string>) -> string;
     test4: func(test: stream<string>) -> stream<string>;
-    get-files: func() -> list<string>;
-    read-file: func() -> string;
+    get-files-p3: func() -> string;
 }
 
 world guest {
+    // https://github.com/bytecodealliance/wasip3-prototyping/tree/main/crates/wasi/src/p3/wit/deps
+    include wasi:cli/imports@0.3.0;
+    include wasi:clocks/imports@0.3.0;
+    include wasi:filesystem/imports@0.3.0;
+    include wasi:random/imports@0.3.0;
+    include wasi:sockets/imports@0.3.0;
+
     export intf;
 }
