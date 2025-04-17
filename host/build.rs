@@ -37,13 +37,13 @@ fn main() {
         .arg("wasi-preview1-component-adapter")
         .arg("--target")
         .arg("wasm32-unknown-unknown")
-        // Ensure we use the same version of `wasm-encoder` as the one used in `wasip3-prototyping`
+        // Ensure we use the same version of `wasm-encoder`
         .arg("--config")
         .arg(r#"patch.crates-io.wasm-encoder.version="0.228.0""#)
         .arg("--config")
         .arg(r#"patch.crates-io.wasm-encoder.git="https://github.com/bytecodealliance/wasm-tools""#)
         .arg("--config")
-        .arg(r#"patch.crates-io.wasm-encoder.rev="ec621cf1""#)
+        .arg(r#"patch.crates-io.wasm-encoder.rev="df50cdf49b41656351d603a8f99bae11c50ea524""#)
         .env("CARGO_TARGET_DIR", &out_dir)
         .status()
         .unwrap();
